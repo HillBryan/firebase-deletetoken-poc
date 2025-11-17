@@ -1,0 +1,129 @@
+import { initializeApp } from "@firebase/app";
+import { getMessaging, onMessage, getToken, deleteToken } from "@firebase/messaging";
+
+const firebaseConfig = {
+  apiKey: "...",
+  projectId: "...",
+  messagingSenderId: "...",
+  appId: "...",
+  measurementId: "...",
+};
+
+const VAPID_KEY =
+  "BBUneFIYeIi64Z2xVYXSOauUmk6lYOesT_8Jj7Ftvi-eiBrpqJgCmsUkoPCWQu0vIr4SkAJC9ImB8D3wThLkAxQ";
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
+// Initialize messaging with error handling
+let messaging = null;
+try {
+  messaging = getMessaging(app);
+  console.log("✅ Firebase Messaging initialized from LOCAL TGZ v0.12.23");
+} catch (error) {
+  console.error("❌ Firebase Messaging initialization failed:", error);
+  console.log("This is expected if running in an unsupported environment");
+}
+
+// Cache service worker registration
+let serviceWorkerRegistration = null;
+
+/**
+ * Registers the service worker, requests notification permission,
+ * and returns the FCM token
+ * @returns {Promise<string>} The FCM token
+ */
+export async function registerAndGetToken() {
+  try {
+    // Check if messaging is available
+    if (!messaging) {
+      throw new Error('Firebase Messaging is not available in this environment');
+    }
+
+    // Register service worker if not already registered
+    if (!serviceWorkerRegistration) {
+      serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js');
+      await navigator.serviceWorker.ready;
+      console.log('Service worker registered successfully');
+    }
+
+    // Request notification permission
+    console.log('Requesting notification permission...');
+    const permission = await Notification.requestPermission();
+
+    if (permission !== 'granted') {
+      throw new Error('Notification permission denied');
+    }
+
+    console.log('Notification permission granted');
+
+    // Get FCM token with custom service worker
+    const token = await getToken(messaging, {
+      vapidKey: VAPID_KEY,
+      serviceWorkerRegistration
+    });
+
+    if (!token) {
+      throw new Error('No FCM token available');
+    }
+
+    console.log('FCM token retrieved:', token);
+    return token;
+  } catch (error) {
+    console.error('Error registering and getting token:', error);
+    throw error;
+  }
+}
+
+/**
+ * Deletes the current FCM token
+ * @returns {Promise<void>}
+ */
+export async function removeToken() {
+  try {
+    if (!messaging) {
+      throw new Error('Firebase Messaging is not available');
+    }
+
+    // If serviceWorkerRegistration is not cached, try to find it
+    let swReg = serviceWorkerRegistration;
+    if (!swReg) {
+      console.log('Service worker registration not cached, searching for sw.js...');
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      swReg = registrations.find(reg => reg.active?.scriptURL.includes('sw.js'));
+
+      if (swReg) {
+        console.log('Found sw.js service worker registration');
+        serviceWorkerRegistration = swReg; // Cache it for future use
+      } else {
+        console.warn('No sw.js service worker registration found');
+      }
+    }
+
+    await deleteToken(messaging, {
+        serviceWorkerRegistration: swReg
+    });
+    console.log('Token deleted successfully');
+  } catch (error) {
+    console.error('Error deleting token:', error);
+    throw error;
+  }
+}
+
+// Listen for foreground messages
+if (messaging) {
+  onMessage(messaging, (payload) => {
+    console.log('Message received:', payload);
+
+    const notificationTitle = payload.notification?.title || 'New Message';
+    const notificationOptions = {
+      body: payload.notification?.body || 'You have a new message',
+      icon: './favicon.ico',
+    };
+
+    new Notification(notificationTitle, notificationOptions);
+  });
+} else {
+  console.warn('⚠️ Firebase Messaging not available - message listener not registered');
+}
+
