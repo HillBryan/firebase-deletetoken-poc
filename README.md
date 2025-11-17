@@ -28,17 +28,26 @@ await deleteToken(messaging, {
 
 ## Setup
 
-1. **Install dependencies:**
+1. **Configure Firebase credentials:**
+   
+   You'll need to add your own Firebase configuration:
+   
+   - In `src/services/FirebaseService.js`: Add your FCM web config and VAPID key
+   - In `public/sw.js`: Add your FCM web config
+   
+   Get these from your [Firebase Console](https://console.firebase.google.com/) under Project Settings > Cloud Messaging.
+
+2. **Install dependencies:**
    ```bash
    npm install
    ```
 
-2. **Run the dev server:**
+3. **Run the dev server:**
    ```bash
    npm run serve
    ```
 
-3. **Open in browser:**
+4. **Open in browser:**
    ```
    http://localhost:8080
    ```

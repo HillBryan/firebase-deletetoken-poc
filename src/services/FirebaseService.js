@@ -10,29 +10,21 @@ const firebaseConfig = {
 };
 
 const VAPID_KEY =
-  "BBUneFIYeIi64Z2xVYXSOauUmk6lYOesT_8Jj7Ftvi-eiBrpqJgCmsUkoPCWQu0vIr4SkAJC9ImB8D3wThLkAxQ";
+    "...";
 
-// Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize messaging with error handling
 let messaging = null;
 try {
   messaging = getMessaging(app);
-  console.log("✅ Firebase Messaging initialized from LOCAL TGZ v0.12.23");
+  console.log("Firebase Messaging initialized from LOCAL TGZ v0.12.23");
 } catch (error) {
-  console.error("❌ Firebase Messaging initialization failed:", error);
+  console.error("Firebase Messaging initialization failed:", error);
   console.log("This is expected if running in an unsupported environment");
 }
 
-// Cache service worker registration
 let serviceWorkerRegistration = null;
 
-/**
- * Registers the service worker, requests notification permission,
- * and returns the FCM token
- * @returns {Promise<string>} The FCM token
- */
 export async function registerAndGetToken() {
   try {
     // Check if messaging is available
@@ -75,10 +67,6 @@ export async function registerAndGetToken() {
   }
 }
 
-/**
- * Deletes the current FCM token
- * @returns {Promise<void>}
- */
 export async function removeToken() {
   try {
     if (!messaging) {
@@ -110,7 +98,6 @@ export async function removeToken() {
   }
 }
 
-// Listen for foreground messages
 if (messaging) {
   onMessage(messaging, (payload) => {
     console.log('Message received:', payload);
@@ -124,6 +111,6 @@ if (messaging) {
     new Notification(notificationTitle, notificationOptions);
   });
 } else {
-  console.warn('⚠️ Firebase Messaging not available - message listener not registered');
+  console.warn('⚠Firebase Messaging not available - message listener not registered');
 }
 
