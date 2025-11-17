@@ -25,6 +25,19 @@ try {
 
 let serviceWorkerRegistration = null;
 
+// Register service worker on load
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js')
+    .then(async (registration) => {
+      await navigator.serviceWorker.ready;
+      serviceWorkerRegistration = registration;
+      console.log('Service worker registered successfully on load');
+    })
+    .catch((error) => {
+      console.error('Service worker registration failed:', error);
+    });
+}
+
 export async function registerAndGetToken() {
   try {
     // Check if messaging is available
@@ -32,11 +45,15 @@ export async function registerAndGetToken() {
       throw new Error('Firebase Messaging is not available in this environment');
     }
 
-    // Register service worker if not already registered
+    // Wait for service worker to be ready if not already
     if (!serviceWorkerRegistration) {
-      serviceWorkerRegistration = await navigator.serviceWorker.register('/sw.js');
       await navigator.serviceWorker.ready;
-      console.log('Service worker registered successfully');
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      serviceWorkerRegistration = registrations.find(reg => reg.active?.scriptURL.includes('sw.js'));
+
+      if (!serviceWorkerRegistration) {
+        throw new Error('Service worker not registered');
+      }
     }
 
     // Request notification permission
@@ -73,10 +90,11 @@ export async function removeToken() {
       throw new Error('Firebase Messaging is not available');
     }
 
-    // If serviceWorkerRegistration is not cached, try to find it
+    // Wait for service worker to be ready if not already registered
     let swReg = serviceWorkerRegistration;
     if (!swReg) {
-      console.log('Service worker registration not cached, searching for sw.js...');
+      console.log('Service worker registration not cached, waiting for service worker to be ready...');
+      await navigator.serviceWorker.ready;
       const registrations = await navigator.serviceWorker.getRegistrations();
       swReg = registrations.find(reg => reg.active?.scriptURL.includes('sw.js'));
 
